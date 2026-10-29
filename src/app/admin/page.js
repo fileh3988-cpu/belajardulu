@@ -421,9 +421,33 @@ function AdminDashboard() {
     }
   };
 
+  const handleThemeChange = async (eventCode, newTheme) => {
+    setRowActionLoading(eventCode);
+    try {
+      const res = await fetch('/api/admin/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: eventCode, theme: newTheme })
+      });
+      const result = await res.json();
+      if (result.success) {
+        // Sinkronkan state lokal agar UI langsung update
+        setEvents((prev) => prev.map((ev) => (ev.code === eventCode ? { ...ev, theme: newTheme } : ev)));
+        setSelectedEvent((prev) => (prev && prev.code === eventCode ? { ...prev, theme: newTheme } : prev));
+        localStorage.removeItem('theme_' + eventCode); // Visitor akan ambil tema baru saat reload
+        showToast(`Tema event diubah menjadi ${newTheme}`, 'success');
+      } else {
+        showToast('Gagal mengubah tema: ' + (result.error || ''), 'error');
+      }
+    } catch (error) {
+      showToast('Terjadi kesalahan sistem', 'error');
+    } finally {
+      setRowActionLoading(null);
+    }
+  };
+
   const handleCreateEvent = async (e) => {
-  e.preventDefault();
-  
+    e.preventDefault();
   if (!newEventName.trim()) {
     showToast('Nama event tidak boleh kosong!', 'error');
     return;
@@ -701,6 +725,7 @@ function AdminDashboard() {
                                 <th style={{ padding: '14px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Klien</th>
                                 <th style={{ padding: '14px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Tanggal</th>
                                 <th style={{ padding: '14px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Status</th>
+                                <th style={{ padding: '14px 24px', textAlign: 'left', fontWeight: '700', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Tema</th>
                                 <th style={{ padding: '14px 24px', textAlign: 'right', fontWeight: '700', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Aksi Cepat</th>
                               </tr>
                             </thead>
@@ -727,6 +752,19 @@ function AdminDashboard() {
                                     }}>
                                       {ev.status || 'upcoming'}
                                     </span>
+                                  </td>
+                                  <td style={{ padding: '16px 24px' }}>
+                                    <select
+                                      value={ev.theme === 'jemuran' ? 'jemuran' : (ev.theme || 'elegant')}
+                                      onChange={(e) => handleThemeChange(ev.code, e.target.value)}
+                                      disabled={rowActionLoading === ev.code}
+                                      title="Ganti tema halaman event"
+                                      style={{ padding: '8px 10px', backgroundColor: '#f3f4f6', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', outline: 'none', opacity: rowActionLoading === ev.code ? 0.6 : 1 }}
+                                    >
+                                      <option value="elegant">✨ Elegant</option>
+                                      <option value="modern">🖤 Modern</option>
+                                      <option value="jemuran">👕 Jemuran</option>
+                                    </select>
                                   </td>
                                   <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -1175,8 +1213,9 @@ function AdminDashboard() {
                     <option value="999999">Manual Only</option>
                   </select>
                   <select value={newEventTheme} onChange={(e) => setNewEventTheme(e.target.value)} style={{ padding: '12px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-main)', outline: 'none' }}>
-                    <option value="elegant"> Tema Elegant</option>
+                    <option value="elegant">✨ Tema Elegant</option>
                     <option value="modern">🖤 Tema Modern</option>
+                    <option value="jemuran">👕 Tema Jemuran</option>
                   </select>
                 </div>
                 <button type="submit" disabled={isCreatingEvent} style={{ padding: '14px', backgroundColor: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '8px' }}>

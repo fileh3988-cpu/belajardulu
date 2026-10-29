@@ -92,3 +92,53 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }
+
+// Update event (misal: ganti tema). Diproteksi sesi admin.
+const ALLOWED_UPDATE_FIELDS = ['theme', 'auto_approve_delay', 'magic_link_duration', 'status', 'client_name', 'client_email', 'client_phone', 'event_date', 'venue', 'max_uploads'];
+const VALID_THEMES = ['elegant', 'modern', 'jemuran'];
+
+export async function PATCH(request) {
+  try {
+    if (!requireAdmin(request)) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { code, ...updates } = body;
+
+    if (!code) {
+      return NextResponse.json({ error: 'Kode event wajib diisi' }, { status: 400 });
+    }
+
+    // Whitelist field yang boleh diubah — cegah injection kolom lain
+    const payload = {};
+    for (const key of Object.keys(updates)) {
+      if (ALLOWED_UPDATE_FIELDS.includes(key)) payload[key] = updates[key];
+    }
+
+    if (Object.keys(payload).length === 0) {
+      return NextResponse.json({ error: 'Tidak ada perubahan yang valid' }, { status: 400 });
+    }
+
+    if (payload.theme !== undefined && !VALID_THEMES.includes(payload.theme)) {
+      return NextResponse.json({ error: 'Tema tidak valid' }, { status: 400 });
+    }
+
+    const { data, error } = await supabaseServer
+      .from('events')
+      .update(payload)
+      .eq('code', code)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update event DB error:', error);
+      return NextResponse.json({ error: 'Gagal mengubah event' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error('Update event error:', error);
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
+  }
+}
