@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
+import { requireAdmin } from '@/lib/adminAuth';
+
+// Helper: respons 401 jika tidak ada sesi admin valid
+function unauthorized() {
+  return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+}
 
 // GET: Ambil semua foto (dengan filter status DAN eventCode)
 export async function GET(request) {
@@ -35,9 +41,11 @@ export async function GET(request) {
   }
 }
 
-// PATCH: Update status foto (Approve/Reject)
+// PATCH: Update status foto (Approve/Reject) — khusus admin
 export async function PATCH(request) {
   try {
+    if (!requireAdmin(request)) return unauthorized();
+
     const body = await request.json();
     const { photoId, newStatus } = body;
 
@@ -69,9 +77,11 @@ export async function PATCH(request) {
   }
 }
 
-// DELETE: Hapus foto
+// DELETE: Hapus foto — khusus admin
 export async function DELETE(request) {
   try {
+    if (!requireAdmin(request)) return unauthorized();
+
     const body = await request.json();
     const { photoId } = body;
 

@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export async function GET(request) {
   try {
+    if (!requireAdmin(request)) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const eventCode = searchParams.get('eventCode');
 
@@ -78,6 +83,6 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('Report API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }

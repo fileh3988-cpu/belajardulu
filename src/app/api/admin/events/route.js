@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { supabaseServer } from '@/lib/supabaseClient';
+import { requireAdmin } from '@/lib/adminAuth';
 
-export async function GET() {
+export async function GET(request) {
   try {
+    if (!requireAdmin(request)) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+    }
+
     const { data, error } = await supabaseServer
       .from('events')
       .select('*')
@@ -13,12 +19,16 @@ export async function GET() {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Get events error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
+    if (!requireAdmin(request)) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { 
       name, 
@@ -41,9 +51,12 @@ export async function POST(request) {
     if (isNaN(delayValue) || autoApproveDelay === '') {
       delayValue = 999999; 
     }
-    // Generate unique code
-    const eventCode = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 30);
-    const magicLinkToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    // Generate unique code (slug + suffix acak agar tidak bentrok untuk nama serupa)
+    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'event';
+    const suffix = randomBytes(3).toString('hex'); // 6 karakter hex
+    const eventCode = `${slug}-${suffix}`;
+    // Token kriptografis aman (bukan Math.random)
+    const magicLinkToken = randomBytes(24).toString('base64url');
 
     const { data, error } = await supabaseServer
       .from('events')
@@ -65,11 +78,17 @@ export async function POST(request) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Create event DB error:', error);
+      if (error.code === '23505') {
+        return NextResponse.json({ error: 'Event dengan kode yang sama sudah ada. Coba lagi.' }, { status: 409 });
+      }
+      return NextResponse.json({ error: 'Gagal membuat event. Coba lagi.' }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Create event error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }
