@@ -65,7 +65,7 @@ export { COOKIE_NAME as ADMIN_COOKIE_NAME, SESSION_MAX_AGE_SECONDS }
  * Mengembalikan { role } jika terautentikasi, atau null.
  */
 export function requireAdmin(request) {
-  const token = request.cookies.get(ADMIN_COOKIE_NAME)?.value
+  const token = request.cookies.get(COOKIE_NAME)?.value
   const session = verifySessionToken(token)
   return session // null jika tidak valid
 }
