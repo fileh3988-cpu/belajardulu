@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
+import { createSessionToken, sessionCookieOptions, ADMIN_COOKIE_NAME } from '@/lib/adminAuth';
 
 export async function GET(request) {
   try {
@@ -34,18 +35,20 @@ export async function GET(request) {
       }
     }
 
-    // Link valid - kembalikan data event
-    return NextResponse.json({ 
-      success: true, 
+    // Link valid — buat sesi admin (httpOnly cookie) untuk token ini,
+    // dan JANGAN kembalikan magic_link_token ke client (sudah dipakai untuk verifikasi)
+    const response = NextResponse.json({
+      success: true,
       event: {
         code: event.code,
         name: event.name,
-        magic_link_token: event.magic_link_token
       }
     });
+    response.cookies.set(ADMIN_COOKIE_NAME, createSessionToken('admin'), sessionCookieOptions());
+    return response;
 
   } catch (error) {
     console.error('Access validation error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }

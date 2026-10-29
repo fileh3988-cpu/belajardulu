@@ -36,6 +36,7 @@ function AdminDashboard() {
   const [newEventDate, setNewEventDate] = useState('');
   const [newVenue, setNewVenue] = useState('');
   const [createdMagicLink, setCreatedMagicLink] = useState('');
+  const [createdEventToken, setCreatedEventToken] = useState('');
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showMagicLinkModal, setShowMagicLinkModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -346,9 +347,11 @@ function AdminDashboard() {
     setUndoAction(null);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('adminLoggedIn'); localStorage.removeItem('adminIsSuperAdmin');
     localStorage.removeItem('adminEventCode'); localStorage.removeItem('adminEventName');
+    // Hapus sesi httpOnly cookie di server
+    try { await fetch('/api/admin/logout', { method: 'POST' }); } catch (e) { /* abaikan */ }
     router.push('/admin/login');
   };
 
@@ -428,6 +431,7 @@ function AdminDashboard() {
   
   setIsCreatingEvent(true); 
   setCreatedMagicLink('');
+  setCreatedEventToken('');
   
   try {
     const res = await fetch('/api/admin/events', { 
@@ -449,6 +453,7 @@ function AdminDashboard() {
     const result = await res.json();
     
     if (result.success) {
+      setCreatedEventToken(result.data.magic_link_token);
       setCreatedMagicLink(getBaseUrl() + '/admin/access?token=' + result.data.magic_link_token);
       showToast('Event berhasil dibuat!', 'success');
       // Reset form
@@ -874,11 +879,11 @@ function AdminDashboard() {
                     </button>
                   </div>
                   <div style={{ height: '160px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => setPreviewPhoto(photo)}>
-                    <img src={photo.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={photo.image_url} alt={`Foto dari ${photo.guest_name || 'tamu'}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                   <div style={{ padding: '12px' }}>
                     <p style={{ fontWeight: '700', margin: '0 0 4px 0', fontSize: '14px' }}>{photo.guest_name}</p>
-                    {photo.message && <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px 0', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{photo.message}"</p>}
+                    {photo.message && <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px 0', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{"“"}{photo.message}{"”"}</p>}
                     <div style={{ display: 'flex', gap: '8px' }}>
                       {photo.status !== 'approved' && <button onClick={() => handleStatusChange(photo.id, 'approved')} style={{ flex: 1, padding: '8px', backgroundColor: '#dcfce7', color: '#166534', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>Approve</button>}
                       {photo.status !== 'rejected' && <button onClick={() => handleStatusChange(photo.id, 'rejected')} style={{ flex: 1, padding: '8px', backgroundColor: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>Reject</button>}
@@ -989,7 +994,7 @@ function AdminDashboard() {
           <div style={{ position: 'relative', width: '100%', maxWidth: '900px', aspectRatio: '16/9', backgroundColor: '#000', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)', border: '1px solid var(--border)' }} onClick={(e) => e.stopPropagation()}>
             
             {/* Gambar Utama */}
-            <img src={previewPhoto.image_url} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} />
+            <img src={previewPhoto.image_url} alt={`Foto dari ${previewPhoto.guest_name || 'tamu'}`} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} />
             
             {/* Overlay Bawah (Simulasi Tampilan Display Page) */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '40px', background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, transparent 100%)', pointerEvents: 'none' }}>
@@ -999,7 +1004,7 @@ function AdminDashboard() {
                 </p>
                 {previewPhoto.message && (
                   <p style={{ fontSize: '20px', color: '#e4e4e7', margin: 0, fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', lineHeight: 1.4, maxWidth: '800px' }}>
-                    "{previewPhoto.message}"
+                    {"“"}{previewPhoto.message}{"”"}
                   </p>
                 )}
               </div>
@@ -1112,7 +1117,7 @@ function AdminDashboard() {
             </div>
             
             <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: 1.6 }}>
-              Anda akan menghapus event <b style={{ color: 'var(--text-main)' }}>"{selectedEvent?.name}"</b> beserta <b style={{ color: '#dc2626' }}>SEMUA foto dan data tamu</b> di dalamnya. 
+              Anda akan menghapus event <b style={{ color: 'var(--text-main)' }}>{"“"}{selectedEvent?.name}{"”"}</b> beserta <b style={{ color: '#dc2626' }}>SEMUA foto dan data tamu</b> di dalamnya. 
               <br/><br/>
               Tindakan ini <b>tidak dapat dibatalkan (Undo)</b>.
             </p>
@@ -1137,7 +1142,7 @@ function AdminDashboard() {
             {/* === MODAL BUAT EVENT BARU === */}
             {/* === MODAL BUAT EVENT BARU === */}
       {showCreateModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(4px)' }} onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(4px)' }} onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); setCreatedEventToken(''); }}>
           <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '16px', padding: '32px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid var(--border)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} onClick={(e) => e.stopPropagation()}>
             
             {/* Header Modal */}
@@ -1145,7 +1150,7 @@ function AdminDashboard() {
               <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <PlusCircle size={20} color="var(--accent)" /> Buat Event Baru
               </h3>
-              <button onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+              <button onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); setCreatedEventToken(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
             </div>
             
             {/* CONDITIONAL: Tampilkan Form ATAU Success Card */}
@@ -1206,11 +1211,12 @@ function AdminDashboard() {
                   </button>
                   <button 
                     onClick={() => { 
-                      const newEvent = events.find(e => e.magic_link_token === createdMagicLink.split('token=')[1]);
+                      const newEvent = events.find(e => e.magic_link_token === createdEventToken);
                       if(newEvent) {
                         setQrEvent(newEvent);
                         setShowCreateModal(false);
                         setCreatedMagicLink('');
+                        setCreatedEventToken('');
                       }
                     }} 
                     style={{ flex: 1, padding: '12px', backgroundColor: '#fff', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
@@ -1222,7 +1228,7 @@ function AdminDashboard() {
                 </div>
                 
                 <button 
-                  onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); }}
+                  onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); setCreatedEventToken(''); }}
                   style={{ marginTop: '20px', background: 'none', border: 'none', color: '#15803d', cursor: 'pointer', fontSize: '13px', fontWeight: '600', textDecoration: 'underline' }}
                 >
                   Tutup & Kembali ke Dashboard

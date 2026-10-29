@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
+import { requireAdmin } from '@/lib/adminAuth';
+
+function unauthorized() {
+  return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+}
 
 export async function GET(request) {
   try {
+    if (!requireAdmin(request)) return unauthorized();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const eventCode = searchParams.get('eventCode');
@@ -24,12 +30,13 @@ export async function GET(request) {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Get photos error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }
 
 export async function PATCH(request) {
   try {
+    if (!requireAdmin(request)) return unauthorized();
     const { photoId, newStatus } = await request.json();
 
     const { data, error } = await supabaseServer
@@ -44,12 +51,13 @@ export async function PATCH(request) {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Update photo error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }
 
 export async function DELETE(request) {
   try {
+    if (!requireAdmin(request)) return unauthorized();
     const { photoId } = await request.json();
 
     // SOFT DELETE: set deleted_at = NOW()
@@ -65,6 +73,6 @@ export async function DELETE(request) {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Delete photo error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }

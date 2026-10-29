@@ -11,7 +11,8 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     // Load tema dari localStorage saat pertama kali buka
     const savedTheme = localStorage.getItem('app-theme') || 'elegant';
-    applyTheme(savedTheme);
+    setTheme(savedTheme);
+    document.documentElement.setAttribute('data-theme', savedTheme);
 
     // Listener untuk sinkronisasi antar tab browser
     const handleStorageChange = (e) => {

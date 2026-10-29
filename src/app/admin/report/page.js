@@ -116,12 +116,12 @@ export default function ReportPage() {
           {selectedEvent ? (
             <>
               <StatCard icon={<Users size={24} />} label="Tamu Unik" value={stats.uniqueGuests} color="#3b82f6" />
-              <StatCard icon={<Image size={24} />} label="Total Foto" value={stats.total} color="#8b5cf6" />
+              <StatCard icon={<Image size={24} aria-hidden="true" role="img" alt="" />} label="Total Foto" value={stats.total} color="#8b5cf6" />
             </>
           ) : (
             <>
               <StatCard icon={<LayoutDashboard size={24} />} label="Total Event" value={stats.totalEvents} color="#3b82f6" />
-              <StatCard icon={<Image size={24} />} label="Total Foto" value={stats.total} color="#8b5cf6" />
+              <StatCard icon={<Image size={24} aria-hidden="true" role="img" alt="" />} label="Total Foto" value={stats.total} color="#8b5cf6" />
             </>
           )}
           <StatCard icon={<CheckCircle2 size={24} />} label="Approved" value={stats.approved} color="#22c55e" />

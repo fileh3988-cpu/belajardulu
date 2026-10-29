@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
+import { requireSuperAdmin } from '@/lib/adminAuth';
 
 export async function DELETE(request) {
   try {
+    if (!requireSuperAdmin(request)) {
+      return NextResponse.json({ error: 'Hanya super admin yang boleh menghapus event.' }, { status: 403 });
+    }
     const { eventCode } = await request.json();
 
     if (!eventCode) {
@@ -29,6 +33,6 @@ export async function DELETE(request) {
 
   } catch (error) {
     console.error('Delete event error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }

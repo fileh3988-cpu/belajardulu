@@ -276,7 +276,7 @@ export default function DisplayPage() {
                       onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.1)'; }} 
                       onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; }}
                     >
-                      <img src={photo.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: isPending ? 'blur(12px) brightness(0.7)' : 'none', transition: 'filter 0.5s' }} loading="lazy" />
+                      <img src={photo.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: isPending ? 'blur(12px) brightness(0.7)' : 'none', transition: 'filter 0.5s' }} loading="lazy" />
                       
                       {isPending && (
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
@@ -288,7 +288,7 @@ export default function DisplayPage() {
 
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '20px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)' }}>
                         <p style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: '#fff', fontFamily: 'var(--font-heading)' }}>{photo.guest_name}</p>
-                        {photo.message && <p style={{ fontSize: '13px', color: '#d4d4d8', margin: '6px 0 0 0', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={12} /> "{photo.message}"</p>}
+                        {photo.message && <p style={{ fontSize: '13px', color: '#d4d4d8', margin: '6px 0 0 0', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={12} /> {"“"}{photo.message}{"”"}</p>}
                       </div>
 
                       {photo.id === newPhotoId && !isPending && (
@@ -306,7 +306,7 @@ export default function DisplayPage() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 88px)', padding: '32px' }}>
             {photos.length > 0 && (
               <div style={{ position: 'relative', maxWidth: '1100px', width: '100%', maxHeight: '80vh' }}>
-                <img src={photos[currentSlide]?.image_url} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '20px', filter: photos[currentSlide]?.status === 'pending' ? 'blur(16px) brightness(0.6)' : 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', transition: 'filter 0.5s' }} />
+                <img src={photos[currentSlide]?.image_url} alt={photos[currentSlide]?.guest_name ? `Foto dari ${photos[currentSlide].guest_name}` : "Foto"} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '20px', filter: photos[currentSlide]?.status === 'pending' ? 'blur(16px) brightness(0.6)' : 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', transition: 'filter 0.5s' }} />
                 
                 {photos[currentSlide]?.status === 'pending' && (
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -319,7 +319,7 @@ export default function DisplayPage() {
                 <div style={{ position: 'absolute', bottom: '32px', left: '32px', right: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                   <div style={{ backgroundColor: 'rgba(0,0,0,0.6)', padding: '20px 24px', borderRadius: '16px', backdropFilter: 'blur(8px)' }}>
                     <p style={{ fontSize: '28px', fontWeight: '800', margin: 0, color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontFamily: 'var(--font-heading)' }}>{photos[currentSlide]?.guest_name}</p>
-                    {photos[currentSlide]?.message && <p style={{ fontSize: '18px', color: '#e4e4e7', margin: '8px 0 0 0', fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', maxWidth: '700px', lineHeight: 1.5 }}>"{photos[currentSlide]?.message}"</p>}
+                    {photos[currentSlide]?.message && <p style={{ fontSize: '18px', color: '#e4e4e7', margin: '8px 0 0 0', fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', maxWidth: '700px', lineHeight: 1.5 }}>{"“"}{photos[currentSlide]?.message}{"”"}</p>}
                   </div>
                   <p style={{ fontSize: '14px', color: '#a1a1aa', fontFamily: 'var(--font-mono)', fontWeight: '600', backgroundColor: 'rgba(0,0,0,0.6)', padding: '8px 16px', borderRadius: '20px', backdropFilter: 'blur(8px)' }}>{currentSlide + 1} / {photos.length}</p>
                 </div>
@@ -332,7 +332,7 @@ export default function DisplayPage() {
       {selectedPhoto && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', backdropFilter: 'blur(12px)' }} onClick={() => { setSelectedPhoto(null); setReportStatus(''); }}>
           <div style={{ position: 'relative', maxWidth: '900px', width: '100%', backgroundColor: 'var(--bg-card)', borderRadius: '24px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)' }} onClick={(e) => e.stopPropagation()}>
-            <img src={selectedPhoto.image_url} style={{ width: '100%', maxHeight: '65vh', objectFit: 'contain', backgroundColor: '#000', display: 'block', filter: selectedPhoto.status === 'pending' ? 'blur(12px)' : 'none' }} />
+            <img src={selectedPhoto.image_url} alt={`Foto dari ${selectedPhoto.guest_name || 'tamu'}`} style={{ width: '100%', maxHeight: '65vh', objectFit: 'contain', backgroundColor: '#000', display: 'block', filter: selectedPhoto.status === 'pending' ? 'blur(12px)' : 'none' }} />
             
             {selectedPhoto.status === 'pending' && (
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -345,7 +345,7 @@ export default function DisplayPage() {
             <div style={{ padding: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '32px' }}>
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: '24px', fontWeight: '800', margin: 0, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>{selectedPhoto.guest_name}</p>
-                {selectedPhoto.message && <p style={{ fontSize: '18px', color: 'var(--text-muted)', margin: '12px 0 0 0', fontStyle: 'italic', lineHeight: 1.6, display: 'flex', gap: '8px' }}><MessageSquare size={18} style={{ marginTop: '4px', flexShrink: 0 }} /> "{selectedPhoto.message}"</p>}
+                {selectedPhoto.message && <p style={{ fontSize: '18px', color: 'var(--text-muted)', margin: '12px 0 0 0', fontStyle: 'italic', lineHeight: 1.6, display: 'flex', gap: '8px' }}><MessageSquare size={18} style={{ marginTop: '4px', flexShrink: 0 }} /> {"“"}{selectedPhoto.message}{"”"}</p>}
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Clock size={14} /> {new Date(selectedPhoto.created_at).toLocaleString('id-ID')}
                 </p>

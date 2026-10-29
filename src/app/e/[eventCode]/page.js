@@ -9,6 +9,9 @@ import {
 import { supabaseBrowser } from '@/lib/supabaseClient';
 import JemuranLayout from '@/components/JemuranLayout';
 
+// Helper murni (di luar komponen) agar effect dependency selalu stabil
+const storageKeyFor = (code) => 'guest_uploads_' + code;
+
 export default function GuestPage() {
   const params = useParams();
   const eventCode = params?.eventCode || 'unknown';
@@ -39,7 +42,6 @@ export default function GuestPage() {
   const realtimeChannelRef = useRef(null);
   const videoRef = useRef(null);
   const cameraStreamRef = useRef(null);
-  const STORAGE_KEY = 'guest_uploads_' + eventCode;
 
   // === 1. LOAD TEMA (Synchronous dari localStorage untuk anti-flash) ===
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function GuestPage() {
 
   // === 2. LOAD DATA AWAL ===
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(storageKeyFor(eventCode));
     if (saved) {
       try { setMyPhotos(JSON.parse(saved)); setShowMyGallery(true); } catch (e) {}
     }
@@ -81,7 +83,7 @@ export default function GuestPage() {
 
   useEffect(() => {
     if (myPhotos.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(myPhotos));
+      localStorage.setItem(storageKeyFor(eventCode), JSON.stringify(myPhotos));
       setShowMyGallery(true);
     }
   }, [myPhotos]);
@@ -370,7 +372,7 @@ export default function GuestPage() {
                 const sc = getStatusConfig(photo.status); const StatusIcon = sc.icon;
                 return (
                   <div key={photo.id} onClick={() => setPreviewPhoto(photo)} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                    <img src={photo.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    <img src={photo.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     <div style={{ position: 'absolute', top: '12px', right: '12px', padding: '6px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: sc.bg, color: sc.color, display: 'flex', alignItems: 'center', gap: '4px' }}><StatusIcon size={12} /> {sc.label}</div>
                     <button onClick={(e) => { e.stopPropagation(); handleRemovePhoto(photo.id); }} style={{ position: 'absolute', top: '12px', left: '12px', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.9)', color: '#dc2626', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={14} /></button>
                   </div>
@@ -399,7 +401,7 @@ export default function GuestPage() {
                 const isPending = photo.status === 'pending';
                 return (
                   <div key={photo.id} onClick={() => setPreviewPhoto(photo)} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                    <img src={photo.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: isPending ? 'blur(12px) brightness(0.7)' : 'none' }} />
+                    <img src={photo.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: isPending ? 'blur(12px) brightness(0.7)' : 'none' }} />
                     {isPending && (
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
                         <span style={{ backgroundColor: '#eab308', color: '#000', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> MENUNGGU</span>
@@ -459,12 +461,12 @@ export default function GuestPage() {
     return (
       <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(8px)' }} onClick={() => setPreviewPhoto(null)}>
         <div style={{ position: 'relative', maxWidth: '800px', width: '100%', backgroundColor: 'var(--bg-card)', borderRadius: '20px', overflow: 'hidden', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} onClick={(e) => e.stopPropagation()}>
-          <img src={previewPhoto.image_url} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', backgroundColor: '#000', display: 'block' }} />
+          <img src={previewPhoto.image_url} alt={`Foto dari ${previewPhoto.guest_name || 'tamu'}`} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', backgroundColor: '#000', display: 'block' }} />
           <div style={{ padding: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '24px' }}>
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-heading)' }}>{previewPhoto.guest_name}</p>
-                {previewPhoto.message && <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', margin: '12px 0 0 0', fontSize: '16px', lineHeight: 1.6 }}>"{previewPhoto.message}"</p>}
+                {previewPhoto.message && <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', margin: '12px 0 0 0', fontSize: '16px', lineHeight: 1.6 }}>{"“"}{previewPhoto.message}{"”"}</p>}
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={12} /> {new Date(previewPhoto.uploaded_at || previewPhoto.created_at).toLocaleString('id-ID')}</p>
               </div>
               {myPhotos.some(p => p.id === previewPhoto.id) && (

@@ -14,10 +14,39 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Tidak ada file yang diupload' }, { status: 400 });
     }
 
+    const minSize = 10 * 1024; // 10 KB (mencegah file kosong/rusak)
+    const maxSize = 20 * 1024 * 1024; // 20 MB (sangat longgar untuk HP modern)
+
+    if (!eventCode) {
+      return NextResponse.json({ error: 'Event tidak valid.' }, { status: 400 });
+    }
+
+    // Validasi event ada & cek batas upload per event (mencegah spam)
+    const { data: event, error: eventError } = await supabaseServer
+      .from('events')
+      .select('code, max_uploads')
+      .eq('code', eventCode)
+      .single();
+
+    if (eventError || !event) {
+      return NextResponse.json({ error: 'Event tidak ditemukan.' }, { status: 404 });
+    }
+
+    if (event.max_uploads) {
+      const { count } = await supabaseServer
+        .from('photos')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_code', eventCode);
+
+      if (count >= event.max_uploads) {
+        return NextResponse.json({
+          error: `Batas upload untuk event ini sudah tercapai (maks ${event.max_uploads} foto).`,
+        }, { status: 429 });
+      }
+    }
+
     // === SMART FILTER ===
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    const minSize = 10 * 1024; // 100 KB (mencegah file kosong/rusak)
-    const maxSize = 20 * 1024 * 1024; // 20 MB (sangat longgar untuk HP modern)
 
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({ 
@@ -71,6 +100,6 @@ export async function POST(request) {
     
   } catch (error) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan saat mengupload. Coba lagi.' }, { status: 500 });
   }
 }

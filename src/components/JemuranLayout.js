@@ -93,7 +93,7 @@ export default function JemuranLayout(props) {
                 }}>
                   <div style={{ position: 'absolute', top: '-32px', left: '50%', width: '2px', height: '32px', backgroundColor: 'var(--text-muted)', opacity: 0.7 }}></div>
                   <div style={{ width: '100%', aspectRatio: '1/1', backgroundColor: '#000', overflow: 'hidden', marginBottom: '8px' }}>
-                    <img src={photo.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={photo.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'cursive', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{photo.guest_name}</p>
                   {photo.status === 'pending' && (
@@ -116,7 +116,7 @@ export default function JemuranLayout(props) {
             <input type="text" name="guestName" required placeholder="Nama Anda..." style={{ width: '100%', padding: '12px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border)', borderRadius: '8px', outline: 'none' }} />
             {filePreview && (
               <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', marginBottom: '8px' }}>
-                <img src={filePreview} style={{ width: '100%', maxHeight: '150px', objectFit: 'cover' }} />
+                <img src={filePreview} alt="Pratinjau foto" style={{ width: '100%', maxHeight: '150px', objectFit: 'cover' }} />
                 <button type="button" onClick={() => { setFilePreview(''); setFileName(''); }} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <X size={14} />
                 </button>

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export async function POST(request) {
   try {
+    if (!requireAdmin(request)) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+    }
     const { photoId } = await request.json();
 
     if (!photoId) {
@@ -22,6 +26,6 @@ export async function POST(request) {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Restore photo error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }
