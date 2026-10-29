@@ -7,7 +7,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id">
+    // suppressHydrationWarning: atribut data-theme pada <html> dipasang oleh
+    // script anti-flash (ThemeScript) di browser SEBELUM hidrasi, jadi wajar
+    // berbeda dengan HTML dari server. Ini praktik standar Next.js untuk theme
+    // switching — hanya mengabaikan diff pada tag <html>, bukan menyembunyikan bug.
+    <html lang="id" suppressHydrationWarning>
       
       <body>
         {children}

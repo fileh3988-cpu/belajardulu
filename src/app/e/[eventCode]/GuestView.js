@@ -39,34 +39,31 @@ export default function GuestView({ eventCode }) {
   const videoRef = useRef(null);
   const cameraStreamRef = useRef(null);
 
-  // === 1. LOAD TEMA (Synchronous dari localStorage untuk anti-flash) ===
+  // === 1. LOAD TEMA ===
+  // Sumber kebenaran = database (via /api/event-info), supaya jika admin
+  // mengganti tema event, perubahan langsung terlihat — TIDAK lagi memakai
+  // cache localStorage yang bisa basi. Anti-flash tetap ditangani script
+  // ThemeScript di <head> (pakai cache) lalu dikoreksi di sini secara senyap.
   useEffect(() => {
+    let cancelled = false;
     const loadTheme = async () => {
-      // Cek localStorage dulu (instan, tanpa flash)
-      const savedTheme = localStorage.getItem('theme_' + eventCode);
-      if (savedTheme) {
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        setEventTheme(savedTheme);
-        setThemeLoaded(true);
-        return;
-      }
-      // Kalau tidak ada, fetch dari API
       try {
-        const res = await fetch('/api/event-info?code=' + eventCode);
+        const res = await fetch('/api/event-info?code=' + encodeURIComponent(eventCode));
         const result = await res.json();
-        if (result.success && result.event.theme) {
+        if (!cancelled && result.success && result.event.theme) {
           const theme = result.event.theme;
           document.documentElement.setAttribute('data-theme', theme);
           setEventTheme(theme);
-          localStorage.setItem('theme_' + eventCode, theme);
+          localStorage.setItem('theme_' + eventCode, theme); // untuk anti-flash kunjungan berikutnya
         }
       } catch (error) {
         console.error('Failed to load event theme:', error);
       } finally {
-        setThemeLoaded(true);
+        if (!cancelled) setThemeLoaded(true);
       }
     };
     loadTheme();
+    return () => { cancelled = true; };
   }, [eventCode]);
 
   // === 2. LOAD DATA AWAL ===

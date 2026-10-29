@@ -23,6 +23,7 @@ export default function DisplayView({ eventCode }) {
   const [scrollSpeed, setScrollSpeed] = useState(50);
   const [isPaused, setIsPaused] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [eventTheme, setEventTheme] = useState('modern');
   
   const containerRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -31,14 +32,16 @@ export default function DisplayView({ eventCode }) {
   const lastTimeRef = useRef(0);
   const realtimeChannelRef = useRef(null);
 
-  // Load tema dari database
+  // Load tema dari database (sumber kebenaran; localStorage hanya untuk anti-flash)
   useEffect(() => {
+    let cancelled = false;
     const loadEventTheme = async () => {
       try {
-        const res = await fetch('/api/event-info?code=' + eventCode);
+        const res = await fetch('/api/event-info?code=' + encodeURIComponent(eventCode));
         const result = await res.json();
-        if (result.success && result.event.theme) {
+        if (!cancelled && result.success && result.event.theme) {
           document.documentElement.setAttribute('data-theme', result.event.theme);
+          setEventTheme(result.event.theme);
           localStorage.setItem('theme_' + eventCode, result.event.theme);
         }
       } catch (error) {
@@ -46,6 +49,7 @@ export default function DisplayView({ eventCode }) {
       }
     };
     loadEventTheme();
+    return () => { cancelled = true; };
   }, [eventCode]);
 
   // Load foto awal (sekali saja saat mount)
