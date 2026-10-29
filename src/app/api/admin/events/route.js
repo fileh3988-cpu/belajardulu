@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { supabaseServer } from '@/lib/supabaseClient';
 import { requireAdminForEvent, requireSuperAdmin } from '@/lib/adminAuth';
+import { DEFAULT_THEME_ID, isValidTheme } from '@/lib/themes';
 
 // Alias lokal agar jelas maknanya di handler pembuatan event
 const requireSuperAdminOnly = requireSuperAdmin;
@@ -14,9 +15,11 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
     }
 
+    // Token magic link sengaja TIDAK dikirim ke daftar event (kolom 'token' dikecualikan).
+    // Link admin diambil per-event lewat POST regenerate-link.
     let query = supabaseServer
       .from('events')
-      .select('*')
+      .select('*, token:!magic_link_token')
       .order('created_at', { ascending: false });
 
     // Paksa filter ke event milik sesi jika bukan superadmin
@@ -28,11 +31,61 @@ export async function GET(request) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data });
+    // Strip token — klien tidak pernah butuh nilai aslinya dari daftar event.
+    const safeData = (data || []).map(({ token, ...rest }) => rest);
+
+    return NextResponse.json({ success: true, data: safeData });
   } catch (error) {
     console.error('Get events error:', error);
     return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
+}
+
+// POST /api/admin/events/regenerate-link { code }
+// Ambil (atau buat ulang) magic link token sebuah event.
+// Dipanggil lewat POST (bukan GET) supaya token tidak tersimpan di log server/browser history.
+export async function regenerateLink(request) {
+  try {
+    const session = requireAdminForEvent(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { code } = body;
+    if (!code) {
+      return NextResponse.json({ error: 'Kode event wajib diisi' }, { status: 400 });
+    }
+
+    // Admin magic-link hanya boleh menyentuh event miliknya sendiri
+    if (session.role !== 'superadmin' && session.eventCode !== code) {
+      return NextResponse.json({ error: 'Tidak diizinkan untuk event ini.' }, { status: 403 });
+    }
+
+    const freshToken = randomBytes(24).toString('base64url');
+
+    const { data, error } = await supabaseServer
+      .from('events')
+      .update({ magic_link_token: freshToken })
+      .eq('code', code)
+      .select('magic_link_token')
+      .single();
+
+    if (error || !data) {
+      console.error('Regenerate link error:', error);
+      return NextResponse.json({ error: 'Gagal mengambil link admin' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, token: data.magic_link_token });
+  } catch (error) {
+    console.error('Regenerate link error:', error);
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
+  }
+}
+
+// Helper internal: panggil handler regenerate saat POST dengan action khusus
+export async function POST_LINK(request) {
+  return regenerateLink(request);
 }
 
 export async function POST(request) {
@@ -47,7 +100,7 @@ export async function POST(request) {
       name, 
       autoApproveDelay = '60', 
       magicLinkDuration = '7',
-      theme = 'elegant',
+      theme = DEFAULT_THEME_ID,
       client_name = '',
       client_email = '',
       client_phone = '',
@@ -58,6 +111,10 @@ export async function POST(request) {
         
     if (!name) {
       return NextResponse.json({ error: 'Nama event wajib diisi' }, { status: 400 });
+    }
+    // Validasi tema terhadap registry pusat (satu-satunya sumber daftar tema)
+    if (!isValidTheme(theme)) {
+      return NextResponse.json({ error: 'Tema tidak valid' }, { status: 400 });
     }
     // Konversi delay ke integer. Jika kosong atau bukan angka, pakai 999999 (Manual Only)
     let delayValue = parseInt(autoApproveDelay);
@@ -107,12 +164,13 @@ export async function POST(request) {
 }
 
 // Update event (misal: ganti tema). Diproteksi sesi admin.
-const ALLOWED_UPDATE_FIELDS = ['theme', 'auto_approve_delay', 'magic_link_duration', 'status', 'client_name', 'client_email', 'client_phone', 'event_date', 'venue', 'max_uploads'];
-const VALID_THEMES = ['elegant', 'modern', 'jemuran'];
+// NOTE: 'theme' sengaja TIDAK boleh diubah lewat PATCH — tema dikunci saat event dibuat.
+const ALLOWED_UPDATE_FIELDS = ['auto_approve_delay', 'magic_link_duration', 'status', 'client_name', 'client_email', 'client_phone', 'event_date', 'venue', 'max_uploads'];
 
 export async function PATCH(request) {
   try {
-    if (!requireAdmin(request)) {
+    const session = requireAdminForEvent(request);
+    if (!session) {
       return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
     }
 
@@ -123,6 +181,11 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'Kode event wajib diisi' }, { status: 400 });
     }
 
+    // Admin magic-link hanya boleh mengubah event miliknya sendiri
+    if (session.role !== 'superadmin' && session.eventCode !== code) {
+      return NextResponse.json({ error: 'Tidak diizinkan untuk event ini.' }, { status: 403 });
+    }
+
     // Whitelist field yang boleh diubah — cegah injection kolom lain
     const payload = {};
     for (const key of Object.keys(updates)) {
@@ -131,10 +194,6 @@ export async function PATCH(request) {
 
     if (Object.keys(payload).length === 0) {
       return NextResponse.json({ error: 'Tidak ada perubahan yang valid' }, { status: 400 });
-    }
-
-    if (payload.theme !== undefined && !VALID_THEMES.includes(payload.theme)) {
-      return NextResponse.json({ error: 'Tema tidak valid' }, { status: 400 });
     }
 
     const { data, error } = await supabaseServer

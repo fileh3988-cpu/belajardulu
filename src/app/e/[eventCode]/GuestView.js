@@ -7,14 +7,17 @@ import {
 } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabaseClient';
 import JemuranLayout from '@/components/JemuranLayout';
+import { DEFAULT_THEME_ID, getTheme, resolveTheme } from '@/lib/themes';
 
 // Helper murni (di luar komponen) agar effect dependency selalu stabil
 const storageKeyFor = (code) => 'guest_uploads_' + code;
 
-export default function GuestView({ eventCode }) {
+export default function GuestView({ eventCode, initialTheme = null }) {
   // === STATE ===
-  const [themeLoaded, setThemeLoaded] = useState(false); // ANTI-FLASH: tunggu tema siap
-  const [eventTheme, setEventTheme] = useState('modern');
+  // initialTheme datang dari DATABASE via server component → tidak ada
+  // kedip layout salah saat akses pertama / refresh.
+  const [themeLoaded, setThemeLoaded] = useState(!!initialTheme);
+  const [eventTheme, setEventTheme] = useState(() => resolveTheme(initialTheme || DEFAULT_THEME_ID));
   const [showWelcome, setShowWelcome] = useState(true);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
@@ -259,9 +262,9 @@ export default function GuestView({ eventCode }) {
   // script anti-flash di <head> — tidak ada lagi "flash" warna berbeda saat refresh.
   if (!themeLoaded) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-main)' }}>
+      <div className="animate-fade-in" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-main)', transition: 'background 0.5s' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', boxShadow: '0 12px 32px rgba(59, 130, 246, 0.5)' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', boxShadow: '0 12px 32px color-mix(in srgb, var(--accent) 40%, transparent)' }}>
             <span style={{ color: '#fff', fontSize: '28px', fontWeight: '900' }}>HAQ</span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>Memuat pengalaman...</p>
@@ -270,8 +273,8 @@ export default function GuestView({ eventCode }) {
     );
   }
 
-  // === 7. SMART ROUTER ===
-  if (eventTheme === 'jemuran') {
+  // === 7. SMART ROUTER (berdasarkan style di THEME_REGISTRY) ===
+  if (getTheme(eventTheme).style === 'jemuran') {
     return (
       <>
         <JemuranLayout

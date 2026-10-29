@@ -6,6 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 //import ThemeToggle from '@/components/ThemeToggle';
 import { supabaseBrowser } from '@/lib/supabaseClient';
+import { THEME_LIST, getTheme } from '@/lib/themes';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
@@ -36,7 +37,7 @@ function AdminDashboard() {
   const [newEventDate, setNewEventDate] = useState('');
   const [newVenue, setNewVenue] = useState('');
   const [createdMagicLink, setCreatedMagicLink] = useState('');
-  const [createdEventToken, setCreatedEventToken] = useState('');
+  const [createdEventCode, setCreatedEventCode] = useState('');
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showMagicLinkModal, setShowMagicLinkModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -369,6 +370,33 @@ function AdminDashboard() {
     setCurrentEventLink(link); setShowMagicLinkModal(true); navigator.clipboard.writeText(link);
   };
 
+  // Ambil magic link per event dari tabel — token lama digantikan yang baru
+  // (link lama otomatis mati), lalu langsung disalin ke clipboard.
+  const handleGetAdminLink = async (ev) => {
+    setRowActionLoading(ev.code);
+    try {
+      const res = await fetch('/api/admin/events/regenerate-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: ev.code })
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        showToast('Gagal mengambil link admin: ' + (result.error || ''), 'error');
+        return;
+      }
+      const link = getBaseUrl() + '/admin/access?token=' + result.token;
+      setCurrentEventLink(link);
+      setShowMagicLinkModal(true);
+      try { await navigator.clipboard.writeText(link); } catch (e) {}
+      showToast('Link admin baru disalin! Link lama otomatis tidak berlaku.', 'success');
+    } catch (error) {
+      showToast('Terjadi kesalahan sistem', 'error');
+    } finally {
+      setRowActionLoading(null);
+    }
+  };
+
        const handleExport = async (eventCode) => {
     if (!eventCode) return;
     setRowActionLoading(eventCode);
@@ -421,31 +449,6 @@ function AdminDashboard() {
     }
   };
 
-  const handleThemeChange = async (eventCode, newTheme) => {
-    setRowActionLoading(eventCode);
-    try {
-      const res = await fetch('/api/admin/events', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: eventCode, theme: newTheme })
-      });
-      const result = await res.json();
-      if (result.success) {
-        // Sinkronkan state lokal agar UI langsung update
-        setEvents((prev) => prev.map((ev) => (ev.code === eventCode ? { ...ev, theme: newTheme } : ev)));
-        setSelectedEvent((prev) => (prev && prev.code === eventCode ? { ...prev, theme: newTheme } : prev));
-        localStorage.removeItem('theme_' + eventCode); // Visitor akan ambil tema baru saat reload
-        showToast(`Tema event diubah menjadi ${newTheme}`, 'success');
-      } else {
-        showToast('Gagal mengubah tema: ' + (result.error || ''), 'error');
-      }
-    } catch (error) {
-      showToast('Terjadi kesalahan sistem', 'error');
-    } finally {
-      setRowActionLoading(null);
-    }
-  };
-
   const handleCreateEvent = async (e) => {
     e.preventDefault();
   if (!newEventName.trim()) {
@@ -455,7 +458,7 @@ function AdminDashboard() {
   
   setIsCreatingEvent(true); 
   setCreatedMagicLink('');
-  setCreatedEventToken('');
+  setCreatedEventCode('');
   
   try {
     const res = await fetch('/api/admin/events', { 
@@ -477,7 +480,7 @@ function AdminDashboard() {
     const result = await res.json();
     
     if (result.success) {
-      setCreatedEventToken(result.data.magic_link_token);
+      setCreatedEventCode(result.data.code);
       setCreatedMagicLink(getBaseUrl() + '/admin/access?token=' + result.data.magic_link_token);
       showToast('Event berhasil dibuat!', 'success');
       // Reset form
@@ -754,21 +757,24 @@ function AdminDashboard() {
                                     </span>
                                   </td>
                                   <td style={{ padding: '16px 24px' }}>
-                                    <select
-                                      value={ev.theme === 'jemuran' ? 'jemuran' : (ev.theme || 'elegant')}
-                                      onChange={(e) => handleThemeChange(ev.code, e.target.value)}
-                                      disabled={rowActionLoading === ev.code}
-                                      title="Ganti tema halaman event"
-                                      style={{ padding: '8px 10px', backgroundColor: '#f3f4f6', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', outline: 'none', opacity: rowActionLoading === ev.code ? 0.6 : 1 }}
-                                    >
-                                      <option value="elegant">✨ Elegant</option>
-                                      <option value="modern">🖤 Modern</option>
-                                      <option value="jemuran">👕 Jemuran</option>
-                                    </select>
+                                    {/* Tema dikunci saat event dibuat — tidak bisa diganti dari tabel */}
+                                    {(() => { const t = getTheme(ev.theme); return (
+                                      <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                                        {t.emoji} {t.label}
+                                      </span>
+                                    ); })()}
                                   </td>
                                   <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                      <button 
+                                      <button
+                                        onClick={() => handleGetAdminLink(ev)}
+                                        disabled={rowActionLoading === ev.code}
+                                        style={{ padding: '8px 12px', backgroundColor: '#dcfce7', color: '#166534', border: 'none', borderRadius: '8px', cursor: rowActionLoading === ev.code ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', opacity: rowActionLoading === ev.code ? 0.6 : 1 }}
+                                        title="Salin Link Admin (magic link) — token lama diganti baru"
+                                      >
+                                        <Copy size={14} /> Link Admin
+                                      </button>
+                                      <button
                                         onClick={() => setQrEvent(ev)}
                                         style={{ padding: '8px 12px', backgroundColor: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}
                                         title="Lihat QR Code"
@@ -1180,7 +1186,7 @@ function AdminDashboard() {
             {/* === MODAL BUAT EVENT BARU === */}
             {/* === MODAL BUAT EVENT BARU === */}
       {showCreateModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(4px)' }} onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); setCreatedEventToken(''); }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(4px)' }} onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); setCreatedEventCode(''); }}>
           <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '16px', padding: '32px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid var(--border)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }} onClick={(e) => e.stopPropagation()}>
             
             {/* Header Modal */}
@@ -1188,7 +1194,7 @@ function AdminDashboard() {
               <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <PlusCircle size={20} color="var(--accent)" /> Buat Event Baru
               </h3>
-              <button onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); setCreatedEventToken(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+              <button onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); setCreatedEventCode(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
             </div>
             
             {/* CONDITIONAL: Tampilkan Form ATAU Success Card */}
@@ -1213,9 +1219,7 @@ function AdminDashboard() {
                     <option value="999999">Manual Only</option>
                   </select>
                   <select value={newEventTheme} onChange={(e) => setNewEventTheme(e.target.value)} style={{ padding: '12px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-main)', outline: 'none' }}>
-                    <option value="elegant">✨ Tema Elegant</option>
-                    <option value="modern">🖤 Tema Modern</option>
-                    <option value="jemuran">👕 Tema Jemuran</option>
+                    {THEME_LIST.map((t) => (<option key={t.id} value={t.id}>{t.emoji} Tema {t.label}</option>))}
                   </select>
                 </div>
                 <button type="submit" disabled={isCreatingEvent} style={{ padding: '14px', backgroundColor: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
@@ -1250,12 +1254,12 @@ function AdminDashboard() {
                   </button>
                   <button 
                     onClick={() => { 
-                      const newEvent = events.find(e => e.magic_link_token === createdEventToken);
+                      const newEvent = events.find(e => e.code === createdEventCode);
                       if(newEvent) {
                         setQrEvent(newEvent);
                         setShowCreateModal(false);
                         setCreatedMagicLink('');
-                        setCreatedEventToken('');
+                        setCreatedEventCode('');
                       }
                     }} 
                     style={{ flex: 1, padding: '12px', backgroundColor: '#fff', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
@@ -1267,7 +1271,7 @@ function AdminDashboard() {
                 </div>
                 
                 <button 
-                  onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); setCreatedEventToken(''); }}
+                  onClick={() => { setShowCreateModal(false); setCreatedMagicLink(''); setCreatedEventCode(''); }}
                   style={{ marginTop: '20px', background: 'none', border: 'none', color: '#15803d', cursor: 'pointer', fontSize: '13px', fontWeight: '600', textDecoration: 'underline' }}
                 >
                   Tutup & Kembali ke Dashboard

@@ -10,8 +10,10 @@ import {
 
 // Import Supabase Client (browser-side)
 import { supabaseBrowser } from '@/lib/supabaseClient';
+import { DEFAULT_THEME_ID, getTheme, resolveTheme } from '@/lib/themes';
+import JemuranDisplay from '@/components/JemuranDisplay';
 
-export default function DisplayView({ eventCode }) {
+export default function DisplayView({ eventCode, initialTheme = null }) {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
@@ -23,7 +25,8 @@ export default function DisplayView({ eventCode }) {
   const [scrollSpeed, setScrollSpeed] = useState(50);
   const [isPaused, setIsPaused] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
-  const [eventTheme, setEventTheme] = useState('modern');
+  // initialTheme dari DATABASE via server component -> tidak ada kedip layout
+  const [eventTheme, setEventTheme] = useState(() => resolveTheme(initialTheme || DEFAULT_THEME_ID));
   
   const containerRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -31,6 +34,11 @@ export default function DisplayView({ eventCode }) {
   const scrollAnimationRef = useRef(null);
   const lastTimeRef = useRef(0);
   const realtimeChannelRef = useRef(null);
+
+  // Sinkronkan ulang bila tema datang/berubah dari API (sumber kebenaran DB)
+  useEffect(() => {
+    if (initialTheme) setEventTheme(resolveTheme(initialTheme));
+  }, [initialTheme]);
 
   // Load tema dari database (sumber kebenaran; localStorage hanya untuk anti-flash)
   useEffect(() => {
@@ -40,8 +48,9 @@ export default function DisplayView({ eventCode }) {
         const res = await fetch('/api/event-info?code=' + encodeURIComponent(eventCode));
         const result = await res.json();
         if (!cancelled && result.success && result.event.theme) {
-          document.documentElement.setAttribute('data-theme', result.event.theme);
-          setEventTheme(result.event.theme);
+          const t = resolveTheme(result.event.theme);
+          document.documentElement.setAttribute('data-theme', t);
+          setEventTheme(t);
           localStorage.setItem('theme_' + eventCode, result.event.theme);
         }
       } catch (error) {
@@ -200,6 +209,11 @@ export default function DisplayView({ eventCode }) {
       lastTimeRef.current = 0; 
     }
   }, [autoScroll, isPaused, scrollSpeed]);
+
+  // Tema dengan style 'jemuran' memakai layar khusus agar SAMA dengan halaman upload
+  if (getTheme(eventTheme).style === 'jemuran') {
+    return <JemuranDisplay eventCode={eventCode} photos={photos} />;
+  }
 
   if (loading) return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body)' }}>

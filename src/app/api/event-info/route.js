@@ -20,8 +20,21 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, event }, { headers: { 'Cache-Control': 'no-store' } });
+    // Sertakan etag tema di header HTML SEBELUM JS bundle dimuat, supaya
+    // script anti-flash bisa langsung pasang warna yang benar sejak frame
+    // pertama (tidak ada lagi kedip saat buka/refresh pertama kali).
+    const themeEtag = `"th-${event.theme || 'elegant'}"`;
+    return NextResponse.json(
+      { success: true, event },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+          'ETag': themeEtag,
+          'x-event-theme': event.theme || 'elegant',
+        },
+      }
+    );
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
 }
