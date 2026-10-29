@@ -1,18 +1,30 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { supabaseServer } from '@/lib/supabaseClient';
-import { requireAdmin } from '@/lib/adminAuth';
+import { requireAdminForEvent, requireSuperAdmin } from '@/lib/adminAuth';
+
+// Alias lokal agar jelas maknanya di handler pembuatan event
+const requireSuperAdminOnly = requireSuperAdmin;
 
 export async function GET(request) {
   try {
-    if (!requireAdmin(request)) {
+    // Guard per-event: admin magic-link hanya boleh melihat event-nya sendiri.
+    const session = requireAdminForEvent(request);
+    if (!session) {
       return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
     }
 
-    const { data, error } = await supabaseServer
+    let query = supabaseServer
       .from('events')
       .select('*')
       .order('created_at', { ascending: false });
+
+    // Paksa filter ke event milik sesi jika bukan superadmin
+    if (session.role !== 'superadmin') {
+      query = query.eq('code', session.eventCode);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -25,8 +37,9 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    if (!requireAdmin(request)) {
-      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+    // Membuat event baru adalah hak khusus superadmin
+    if (!requireSuperAdminOnly(request)) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Hanya superadmin yang dapat membuat event.' }, { status: 403 });
     }
 
     const body = await request.json();

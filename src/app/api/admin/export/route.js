@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
-import { requireAdmin } from '@/lib/adminAuth';
+import { requireAdminForEvent } from '@/lib/adminAuth';
 import JSZip from 'jszip';
 
 export async function GET(request) {
   try {
-    if (!requireAdmin(request)) {
-      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
+    const { searchParams } = new URL(request.url);
+    const requestedEventCode = searchParams.get('eventCode');
+
+    // Guard per-event: admin magic-link hanya boleh ekspor event-nya sendiri
+    const session = requireAdminForEvent(request, requestedEventCode);
+    if (!session) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Sesi Anda tidak berlaku untuk event ini.' }, { status: 403 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const eventCode = searchParams.get('eventCode');
-
+    const eventCode = session.role === 'superadmin' ? requestedEventCode : session.eventCode;
     if (!eventCode) {
       return NextResponse.json({ error: 'Event code diperlukan' }, { status: 400 });
     }

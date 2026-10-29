@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
-import { requireAdmin } from '@/lib/adminAuth';
+import { requireAdminForEvent } from '@/lib/adminAuth';
 
 export async function GET(request) {
   try {
-    if (!requireAdmin(request)) {
-      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const eventCode = searchParams.get('eventCode');
+
+    // Guard per-event: admin magic-link hanya boleh stats event-nya sendiri
+    const session = requireAdminForEvent(request, eventCode);
+    if (!session) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Sesi Anda tidak berlaku untuk event ini.' }, { status: 403 });
+    }
 
     let totalEvents = 0;
     let totalPhotos = 0;
@@ -47,6 +49,9 @@ export async function GET(request) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
+    } else if (session.role !== 'superadmin') {
+      // Admin magic-link wajib menyertakan eventCode (dan sudah diverifikasi di guard)
+      return NextResponse.json({ error: 'Event code diperlukan' }, { status: 400 });
     } else {
       // === STATS GLOBAL (SUPER ADMIN) ===
       const { count: eventsCount } = await supabaseServer
