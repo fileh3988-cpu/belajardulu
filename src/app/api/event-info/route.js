@@ -20,7 +20,7 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, event });
+    return NextResponse.json({ success: true, event }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
