@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
-import { requireAdmin, verifyCronSecret } from '@/lib/adminAuth';
+import { requireAdminForEvent, verifyCronSecret } from '@/lib/adminAuth';
 
 // Endpoint ini MENGUBAH data (approve massal), jadi hanya boleh dipanggil
 // oleh admin yang login (POST) atau oleh cron job dengan Bearer CRON_SECRET.
-async function authorize(request) {
-  if (requireAdmin(request)) return true;
+// Cron selalu boleh; admin biasa hanya boleh event yang terikat pada sesinya.
+// Return: true (cron/superadmin) atau string eventCode (harus dicocokkan).
+function authorize(request, eventCode) {
   if (verifyCronSecret(request)) return true;
-  return false;
+  const session = requireAdminForEvent(request, eventCode);
+  if (!session) return false;
+  if (session.role === 'superadmin') return true;
+  return session.eventCode;
 }
 
 async function runAutoApprove(eventCode) {
@@ -45,10 +49,6 @@ async function runAutoApprove(eventCode) {
 
 export async function POST(request) {
   try {
-    if (!(await authorize(request))) {
-      return NextResponse.json({ error: 'Tidak diizinkan.' }, { status: 401 });
-    }
-
     let eventCode;
     const contentType = request.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
@@ -59,6 +59,11 @@ export async function POST(request) {
 
     if (!eventCode) {
       return NextResponse.json({ error: 'Event code required' }, { status: 400 });
+    }
+
+    const auth = authorize(request, eventCode);
+    if (auth === false || (typeof auth === 'string' && auth !== eventCode)) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Event ini bukan wewenang sesi Anda.' }, { status: 403 });
     }
 
     return await runAutoApprove(eventCode);
@@ -72,12 +77,13 @@ export async function POST(request) {
 // tetapi tetap dilindungi auth yang sama.
 export async function GET(request) {
   try {
-    if (!(await authorize(request))) {
-      return NextResponse.json({ error: 'Tidak diizinkan.' }, { status: 401 });
-    }
     const eventCode = new URL(request.url).searchParams.get('eventCode');
     if (!eventCode) {
       return NextResponse.json({ error: 'Event code required' }, { status: 400 });
+    }
+    const auth = authorize(request, eventCode);
+    if (auth === false || (typeof auth === 'string' && auth !== eventCode)) {
+      return NextResponse.json({ error: 'Tidak diizinkan. Event ini bukan wewenang sesi Anda.' }, { status: 403 });
     }
     return await runAutoApprove(eventCode);
   } catch (error) {

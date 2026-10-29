@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseClient';
-import { requireAdmin } from '@/lib/adminAuth';
+import { requireAdminForEvent } from '@/lib/adminAuth';
 
 // Helper: respons 401 jika tidak ada sesi admin valid
 function unauthorized() {
@@ -44,7 +44,8 @@ export async function GET(request) {
 // PATCH: Update status foto (Approve/Reject) — khusus admin
 export async function PATCH(request) {
   try {
-    if (!requireAdmin(request)) return unauthorized();
+    const session = requireAdminForEvent(request);
+    if (!session) return unauthorized();
 
     const body = await request.json();
     const { photoId, newStatus } = body;
@@ -56,6 +57,13 @@ export async function PATCH(request) {
     const allowedStatus = ['pending', 'approved', 'rejected'];
     if (!allowedStatus.includes(newStatus)) {
       return NextResponse.json({ error: 'Status tidak valid' }, { status: 400 });
+    }
+
+    // Anti-IDOR: admin magic-link hanya boleh mengubah foto miliknya sendiri
+    const { data: photoCheck } = await supabaseServer
+      .from('photos').select('id, event_code').eq('id', photoId).single();
+    if (!photoCheck || (session.role !== 'superadmin' && photoCheck.event_code !== session.eventCode)) {
+      return NextResponse.json({ error: 'Foto tidak ditemukan atau bukan wewenang Anda' }, { status: 403 });
     }
 
     const { data, error } = await supabaseServer
@@ -80,13 +88,21 @@ export async function PATCH(request) {
 // DELETE: Hapus foto — khusus admin
 export async function DELETE(request) {
   try {
-    if (!requireAdmin(request)) return unauthorized();
+    const session = requireAdminForEvent(request);
+    if (!session) return unauthorized();
 
     const body = await request.json();
     const { photoId } = body;
 
     if (!photoId) {
       return NextResponse.json({ error: 'photoId wajib diisi' }, { status: 400 });
+    }
+
+    // Anti-IDOR: admin magic-link hanya boleh menghapus foto miliknya sendiri
+    const { data: photoCheck } = await supabaseServer
+      .from('photos').select('id, event_code').eq('id', photoId).single();
+    if (!photoCheck || (session.role !== 'superadmin' && photoCheck.event_code !== session.eventCode)) {
+      return NextResponse.json({ error: 'Foto tidak ditemukan atau bukan wewenang Anda' }, { status: 403 });
     }
 
     const { error } = await supabaseServer

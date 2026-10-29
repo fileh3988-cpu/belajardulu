@@ -35,8 +35,9 @@ export async function GET(request) {
       }
     }
 
-    // Link valid — buat sesi admin (httpOnly cookie) untuk token ini,
-    // dan JANGAN kembalikan magic_link_token ke client (sudah dipakai untuk verifikasi)
+    // Link valid — buat sesi admin (httpOnly cookie) yang TERIKAT ke event ini.
+    // eventCode ikut ditandatangani di token, jadi admin magic-link tidak bisa
+    // mengakses data event lain meskipun mengganti parameter di URL/API.
     const response = NextResponse.json({
       success: true,
       event: {
@@ -44,7 +45,7 @@ export async function GET(request) {
         name: event.name,
       }
     });
-    response.cookies.set(ADMIN_COOKIE_NAME, createSessionToken('admin'), sessionCookieOptions());
+    response.cookies.set(ADMIN_COOKIE_NAME, createSessionToken('admin', event.code), sessionCookieOptions());
     return response;
 
   } catch (error) {

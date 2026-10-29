@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 
 // Halaman admin (UI) dilindungi di sini sebagai lapisan pertama.
-// Perlindungan DATA yang sebenarnya ada di API routes (verifikasi httpOnly cookie
-// via src/lib/adminAuth.js) — middleware ini hanya mencegah halaman tampil sekilas.
+// Perlindungan DATA sesungguhnya ada di API routes: sesi magic-link admin biasa
+// terikat satu eventCode (diverifikasi via requireAdminForEvent di src/lib/adminAuth.js),
+// sehingga mengganti parameter event di URL tidak memberi akses ke event lain.
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
