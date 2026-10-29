@@ -1,10 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle2, Clock, XCircle, Shield } from 'lucide-react';
 
-export default function AccessPage() {
+// useSearchParams butuh Suspense boundary saat prerender (build Next.js)
+export default function AccessPage(props) {
+  return (
+    <Suspense fallback={null}>
+      <AccessContent {...props} />
+    </Suspense>
+  );
+}
+
+function AccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
