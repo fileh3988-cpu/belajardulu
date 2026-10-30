@@ -15,11 +15,17 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
     }
 
-    // Token magic link sengaja TIDAK dikirim ke daftar event (kolom 'token' dikecualikan).
-    // Link admin diambil per-event lewat POST regenerate-link.
+    // Daftar event standar TANPA kolom magic_link_token (klien tidak pernah butuh nilai aslinya).
+    // Link admin diambil per-event lewat handler POST dengan action 'regenerate-link'.
+    const EVENT_FIELDS = [
+      'id', 'code', 'name', 'theme', 'status', 'client_name', 'client_email',
+      'client_phone', 'event_date', 'venue', 'max_uploads', 'auto_approve_delay',
+      'magic_link_duration', 'created_at', 'updated_at'
+    ].join(',');
+
     let query = supabaseServer
       .from('events')
-      .select('*, token:!magic_link_token')
+      .select(EVENT_FIELDS)
       .order('created_at', { ascending: false });
 
     // Paksa filter ke event milik sesi jika bukan superadmin
@@ -32,7 +38,7 @@ export async function GET(request) {
     if (error) throw error;
 
     // Strip token — klien tidak pernah butuh nilai aslinya dari daftar event.
-    const safeData = (data || []).map(({ token, ...rest }) => rest);
+    const safeData = (data || []).map(({ magic_link_token, ...rest }) => rest);
 
     return NextResponse.json({ success: true, data: safeData });
   } catch (error) {
@@ -41,52 +47,7 @@ export async function GET(request) {
   }
 }
 
-// POST /api/admin/events/regenerate-link { code }
-// Ambil (atau buat ulang) magic link token sebuah event.
-// Dipanggil lewat POST (bukan GET) supaya token tidak tersimpan di log server/browser history.
-export async function regenerateLink(request) {
-  try {
-    const session = requireAdminForEvent(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Tidak diizinkan. Login admin diperlukan.' }, { status: 401 });
-    }
 
-    const body = await request.json().catch(() => ({}));
-    const { code } = body;
-    if (!code) {
-      return NextResponse.json({ error: 'Kode event wajib diisi' }, { status: 400 });
-    }
-
-    // Admin magic-link hanya boleh menyentuh event miliknya sendiri
-    if (session.role !== 'superadmin' && session.eventCode !== code) {
-      return NextResponse.json({ error: 'Tidak diizinkan untuk event ini.' }, { status: 403 });
-    }
-
-    const freshToken = randomBytes(24).toString('base64url');
-
-    const { data, error } = await supabaseServer
-      .from('events')
-      .update({ magic_link_token: freshToken })
-      .eq('code', code)
-      .select('magic_link_token')
-      .single();
-
-    if (error || !data) {
-      console.error('Regenerate link error:', error);
-      return NextResponse.json({ error: 'Gagal mengambil link admin' }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, token: data.magic_link_token });
-  } catch (error) {
-    console.error('Regenerate link error:', error);
-    return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
-  }
-}
-
-// Helper internal: panggil handler regenerate saat POST dengan action khusus
-export async function POST_LINK(request) {
-  return regenerateLink(request);
-}
 
 export async function POST(request) {
   try {
