@@ -1,21 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=JetBrains+Mono:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* === TEMA 1: ELEGANT WEDDING (Default) === */
+/* === TEMA 1: ELEGANT WEDDING (Default — versi upgrade rose-gold) === */
 [data-theme="elegant"] {
-  --bg-main: #F0F9FF;        /* Biru sangat muda */
-  --bg-card: #FFFFFF;        /* Putih */
-  --text-main: #1E293B;      /* Biru gelap */
-  --text-muted: #64748B;     /* Abu biru */
-  --accent: #3B82F6;         /* Biru cerah */
-  --accent-2: #10B981;       /* Hijau emerald */
-  --border: #E2E8F0;         /* Abu sangat muda */
+  --bg-main: #FAF7F2;        /* Krem gading hangat */
+  --bg-card: #FFFFFF;        /* Putih bersih */
+  --text-main: #3D3A34;      /* Coklat arang lembut */
+  --text-muted: #8A8478;     /* Abu taupe */
+  --accent: #B76E79;         /* Rose gold */
+  --accent-2: #7C8C6F;       /* Sage green */
+  --border: #E8E2D8;         /* Krem perbatasan */
   --font-heading: 'Playfair Display', serif;
-  --font-body: system-ui, -apple-system, sans-serif;
+  --font-body: 'Lato', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
 }
 
 /* === TEMA 2: MODERN MINIMALIST === */
@@ -30,6 +34,46 @@
   --font-heading: system-ui, -apple-system, sans-serif;
   --font-body: system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* === TEMA 3: JEMURAN (hangat, polaroid) === */
+[data-theme="jemuran"] {
+  --bg-main: #fef3c7;        /* Cream hangat */
+  --bg-card: #fffbeb;        /* Cream lebih terang */
+  --text-main: #451a03;      /* Coklat tua */
+  --text-muted: #92400e;     /* Coklat medium */
+  --accent: #d97706;         /* Amber/Orange */
+  --accent-2: #b45309;       /* Amber gelap */
+  --border: #fcd34d;         /* Kuning muda */
+  --font-heading: 'Georgia', serif;
+  --font-body: 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* === TEMA 4: GALLERY (baru — dinding galeri klasik) === */
+[data-theme="gallery"] {
+  --bg-main: #F5EFE6;        /* Linen museum */
+  --bg-card: #FFFDF8;        /* Kanvas putih hangat */
+  --text-main: #2E2A24;      /* Sepia gelap */
+  --text-muted: #7A6F5D;     /* Abu kertas tua */
+  --accent: #8C6A3F;         /* Perunggu/emas tua */
+  --accent-2: #4A3B2A;       /* Coklat kayu frame */
+  --border: #DDD0BC;         /* Krem garis bingkai */
+  --font-heading: 'Cormorant Garamond', serif;
+  --font-body: 'Lato', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius-sm: 4px;          /* Sudah tajam khas lukisan berbingkai */
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 }
 
 body {
@@ -86,24 +130,11 @@ h1, h2, h3, h4, .font-serif {
 }
 .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
 
-[data-theme="modern"] {
-  /* ... kode yang sudah ada ... */
-  
-  /* Tambahkan ini untuk konsistensi border-radius */
-  --radius-sm: 8px;   /* Tombol kecil, badge */
-  --radius-md: 12px;  /* Input, card kecil */
-  --radius-lg: 16px;  /* Card besar, modal */
-  --radius-xl: 20px;  /* Container utama */
-}
+/* === UBAH WARNA NATIVE KONTROL IKUT TEMA (checkbox/radio/slider) === */
+input[type="range"], input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 
-[data-theme="jemuran"] {
-  --bg-main: #fef3c7;        /* Cream hangat */
-  --bg-card: #fffbeb;        /* Cream lebih terang */
-  --text-main: #451a03;      /* Coklat tua */
-  --text-muted: #92400e;     /* Coklat medium */
-  --accent: #d97706;         /* Amber/Orange */
-  --accent-2: #b45309;       /* Amber gelap */
-  --border: #fcd34d;         /* Kuning muda */
-  --font-heading: 'Georgia', serif;
-  --font-body: 'Georgia', serif;
+/* === FOKUS RATA SEMUA INPUT (UX konsisten antar tema) === */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

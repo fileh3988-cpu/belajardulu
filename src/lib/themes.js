@@ -13,6 +13,9 @@
 
 export const DEFAULT_THEME_ID = 'elegant';
 
+// style: 'standard' = layout kartu (GuestView/DisplayView)
+//        'jemuran'   = tali + polaroid (JemuranLayout/JemuranDisplay)
+//        'gallery'   = dinding galeri berbingkai (GalleryLayout/GalleryDisplay)
 export const THEME_REGISTRY = {
   elegant: {
     id: 'elegant',
@@ -34,6 +37,13 @@ export const THEME_REGISTRY = {
     emoji: '👕',
     style: 'jemuran', // layout khusus: tali + jepitan polaroid (JemuranLayout)
     colors: { bgMain: '#FEF3C7', accent: '#D97706', accent2: '#B45309' },
+  },
+  gallery: {
+    id: 'gallery',
+    label: 'Gallery',
+    emoji: '🖼️',
+    style: 'gallery', // dinding galeri berbingkai emas, serif klasik
+    colors: { bgMain: '#F5EFE6', accent: '#8C6A3F', accent2: '#4A3B2A' },
   },
 };
 

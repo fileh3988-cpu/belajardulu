@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabaseClient';
 import JemuranLayout from '@/components/JemuranLayout';
+import GalleryLayout from '@/components/GalleryLayout';
 import { DEFAULT_THEME_ID, getTheme, resolveTheme } from '@/lib/themes';
 
 // Helper murni (di luar komponen) agar effect dependency selalu stabil
@@ -274,7 +275,28 @@ export default function GuestView({ eventCode, initialTheme = null }) {
   }
 
   // === 7. SMART ROUTER (berdasarkan style di THEME_REGISTRY) ===
-  if (getTheme(eventTheme).style === 'jemuran') {
+  const layoutStyle = getTheme(eventTheme).style;
+
+  // Tema Gallery: dinding galeri berbingkai — SAMA dengan GalleryDisplay
+  if (layoutStyle === 'gallery') {
+    return (
+      <>
+        <GalleryLayout
+          eventCode={eventCode}
+          communityPhotos={communityPhotos} myPhotos={myPhotos}
+          handleSubmit={handleSubmit} formRef={formRef} loading={loading} status={status} statusType={statusType}
+          filePreview={filePreview} fileName={fileName} setFilePreview={setFilePreview} setFileName={setFileName}
+          startCamera={startCamera} showCamera={showCamera} videoRef={videoRef} capturePhoto={capturePhoto}
+          switchCamera={switchCamera} facingMode={facingMode} isCameraReady={isCameraReady} cameraError={cameraError} stopCamera={stopCamera}
+          previewPhoto={previewPhoto} setPreviewPhoto={setPreviewPhoto} handleRemovePhoto={handleRemovePhoto} isRealtimeConnected={isRealtimeConnected}
+        />
+        {showCamera && <CameraModal />}
+        {previewPhoto && <PreviewModal />}
+      </>
+    );
+  }
+
+  if (layoutStyle === 'jemuran') {
     return (
       <>
         <JemuranLayout

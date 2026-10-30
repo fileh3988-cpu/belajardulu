@@ -12,6 +12,7 @@ import {
 import { supabaseBrowser } from '@/lib/supabaseClient';
 import { DEFAULT_THEME_ID, getTheme, resolveTheme } from '@/lib/themes';
 import JemuranDisplay from '@/components/JemuranDisplay';
+import GalleryDisplay from '@/components/GalleryDisplay';
 
 export default function DisplayView({ eventCode, initialTheme = null }) {
   const [photos, setPhotos] = useState([]);
@@ -210,9 +211,13 @@ export default function DisplayView({ eventCode, initialTheme = null }) {
     }
   }, [autoScroll, isPaused, scrollSpeed]);
 
-  // Tema dengan style 'jemuran' memakai layar khusus agar SAMA dengan halaman upload
-  if (getTheme(eventTheme).style === 'jemuran') {
+  // Tema dengan style khusus memakai layar sendiri agar SAMA dengan halaman upload
+  const displayStyle = getTheme(eventTheme).style;
+  if (displayStyle === 'jemuran') {
     return <JemuranDisplay eventCode={eventCode} photos={photos} />;
+  }
+  if (displayStyle === 'gallery') {
+    return <GalleryDisplay eventCode={eventCode} photos={photos} />;
   }
 
   if (loading) return (
