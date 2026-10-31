@@ -41,11 +41,11 @@ export async function GET(request) {
     const response = NextResponse.json({
       success: true,
       event: {
-        code: event.code,
+        code: event.event_code,
         name: event.name,
       }
     });
-    response.cookies.set(ADMIN_COOKIE_NAME, createSessionToken('admin', event.code), sessionCookieOptions());
+    response.cookies.set(ADMIN_COOKIE_NAME, createSessionToken('admin', event.event_code), sessionCookieOptions());
     return response;
 
   } catch (error) {

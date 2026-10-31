@@ -28,7 +28,7 @@ export async function POST(request) {
     const { data, error } = await supabaseServer
       .from('events')
       .update({ magic_link_token: freshToken })
-      .eq('code', code)
+      .eq('event_code', code)
       .select('magic_link_token')
       .single();
 

@@ -12,8 +12,8 @@ export async function GET(request) {
 
     const { data: event, error } = await supabaseServer
       .from('events')
-      .select('name, code, theme')
-      .eq('code', eventCode)
+      .select('name', 'theme', 'event_code')
+      .eq('event_code', eventCode)
       .single();
 
     if (error || !event) {

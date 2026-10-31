@@ -19,7 +19,7 @@ async function runAutoApprove(eventCode) {
   const { data: eventData, error: eventError } = await supabaseServer
     .from('events')
     .select('auto_approve_delay')
-    .eq('code', eventCode)
+    .eq('event_code', eventCode)
     .single();
 
   if (eventError || !eventData || !eventData.auto_approve_delay) {

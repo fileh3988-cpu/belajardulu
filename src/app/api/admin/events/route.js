@@ -18,7 +18,7 @@ export async function GET(request) {
     // Daftar event standar TANPA kolom magic_link_token (klien tidak pernah butuh nilai aslinya).
     // Link admin diambil per-event lewat handler POST dengan action 'regenerate-link'.
     const EVENT_FIELDS = [
-      'id', 'code', 'name', 'theme', 'status', 'client_name', 'client_email',
+      'id', 'event_code', 'name', 'theme', 'status', 'client_name', 'client_email',
       'client_phone', 'event_date', 'venue', 'max_uploads', 'auto_approve_delay',
       'magic_link_duration', 'created_at', 'updated_at'
     ].join(',');
@@ -30,7 +30,7 @@ export async function GET(request) {
 
     // Paksa filter ke event milik sesi jika bukan superadmin
     if (session.role !== 'superadmin') {
-      query = query.eq('code', session.eventCode);
+      query = query.eq('event_code', session.eventCode);
     }
 
     const { data, error } = await query;
@@ -92,7 +92,7 @@ export async function POST(request) {
     const { data, error } = await supabaseServer
       .from('events')
       .insert([{
-        code: eventCode,
+        event_code: eventCode,
         name,
         magic_link_token: magicLinkToken,
         auto_approve_delay: delayValue,
@@ -160,7 +160,7 @@ export async function PATCH(request) {
     const { data, error } = await supabaseServer
       .from('events')
       .update(payload)
-      .eq('code', code)
+      .eq('event_code', code)
       .select()
       .single();
 

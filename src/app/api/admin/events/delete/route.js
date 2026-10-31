@@ -25,7 +25,7 @@ export async function DELETE(request) {
     const { error: eventError } = await supabaseServer
       .from('events')
       .delete()
-      .eq('code', eventCode);
+      .eq('event_code', eventCode);
 
     if (eventError) throw eventError;
 

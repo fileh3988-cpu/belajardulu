@@ -96,7 +96,7 @@ function AdminDashboard() {
         const isSuper = localStorage.getItem('adminIsSuperAdmin') === 'true';
         const savedCode = localStorage.getItem('adminEventCode');
         if (!isSuper && savedCode) {
-          const allowedEvent = result.data.find(e => e.code === savedCode);
+          const allowedEvent = result.data.find(e => e.event_code === savedCode);
           if (allowedEvent) { setEvents([allowedEvent]); setSelectedEvent(allowedEvent); }
         } else {
           setEvents(result.data);
@@ -112,7 +112,7 @@ function AdminDashboard() {
     if (!selectedEvent) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/photos?status=' + filter + '&eventCode=' + selectedEvent.code);
+      const res = await fetch('/api/admin/photos?status=' + filter + '&eventCode=' + selectedEvent.event_code);
       const result = await res.json();
       if (result.data) setPhotos(result.data);
     } catch (error) { console.error('Error loading photos:', error); }
@@ -122,7 +122,7 @@ function AdminDashboard() {
     const loadStats = async () => {
     if (!selectedEvent) return;
     try {
-      const res = await fetch('/api/admin/report?eventCode=' + selectedEvent.code);
+      const res = await fetch('/api/admin/report?eventCode=' + selectedEvent.event_code);
       const result = await res.json();
       if (result.success) {
         setStats({
@@ -162,7 +162,7 @@ function AdminDashboard() {
   useEffect(() => {
     if (activeTab === 'laporan' && selectedEvent) {
       setReportLoading(true);
-      fetch(`/api/admin/report?eventCode=${selectedEvent.code}`)
+      fetch(`/api/admin/report?eventCode=${selectedEvent.event_code}`)
         .then(res => res.json())
         .then(result => { if (result.success) setReportData(result.data); })
         .finally(() => setReportLoading(false));
@@ -173,12 +173,12 @@ function AdminDashboard() {
     if (!selectedEvent) return;
     loadInitialPhotos(); loadStats();
 
-    const channel = supabaseBrowser.channel('admin-photos-' + selectedEvent.code)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'photos', filter: 'event_code=eq.' + selectedEvent.code }, (payload) => {
+    const channel = supabaseBrowser.channel('admin-photos-' + selectedEvent.event_code)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'photos', filter: 'event_code=eq.' + selectedEvent.event_code }, (payload) => {
         loadStats();
         // Refresh laporan juga jika ada perubahan
         if (activeTab === 'laporan') {
-           fetch(`/api/admin/report?eventCode=${selectedEvent.code}`)
+           fetch(`/api/admin/report?eventCode=${selectedEvent.event_code}`)
             .then(res => res.json())
             .then(result => { if (result.success) setReportData(result.data); });
         }
@@ -297,7 +297,7 @@ function AdminDashboard() {
       // Untuk undo delete, kita insert ulang foto ke database
       // Kita pakai endpoint /api/upload dengan data yang sudah ada
       const formData = new FormData();
-      formData.append('eventCode', selectedEvent.code);
+      formData.append('eventCode', selectedEvent.event_code);
       formData.append('guestName', deletedPhoto.guest_name);
       formData.append('message', deletedPhoto.message || '');
       formData.append('imageUrl', deletedPhoto.image_url); // Kirim URL, bukan file
@@ -307,7 +307,7 @@ function AdminDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventCode: selectedEvent.code,
+          eventCode: selectedEvent.event_code,
           guestName: deletedPhoto.guest_name,
           message: deletedPhoto.message,
           imageUrl: deletedPhoto.image_url,
@@ -361,7 +361,7 @@ function AdminDashboard() {
     if (!selectedEvent || !qrRef.current) return;
     const canvas = qrRef.current.querySelector('canvas');
     const pngUrl = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
-    let downloadLink = document.createElement('a'); downloadLink.href = pngUrl; downloadLink.download = 'qr-' + selectedEvent.code + '.png';
+    let downloadLink = document.createElement('a'); downloadLink.href = pngUrl; downloadLink.download = 'qr-' + selectedEvent.event_code + '.png';
     document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
   };
 
@@ -373,12 +373,12 @@ function AdminDashboard() {
   // Ambil magic link per event dari tabel — token lama digantikan yang baru
   // (link lama otomatis mati), lalu langsung disalin ke clipboard.
   const handleGetAdminLink = async (ev) => {
-    setRowActionLoading(ev.code);
+    setRowActionLoading(ev.event_code);
     try {
       const res = await fetch('/api/admin/events/regenerate-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: ev.code })
+        body: JSON.stringify({ code: ev.event_code })
       });
       const result = await res.json();
       if (!res.ok || !result.success) {
@@ -430,7 +430,7 @@ function AdminDashboard() {
       const res = await fetch('/api/admin/events/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventCode: eventToDelete.code })
+        body: JSON.stringify({ eventCode: eventToDelete.event_code })
       });
       
       if (res.ok) {
@@ -480,7 +480,7 @@ function AdminDashboard() {
     const result = await res.json();
     
     if (result.success) {
-      setCreatedEventCode(result.data.code);
+      setCreatedEventCode(result.data.event_code);
       setCreatedMagicLink(getBaseUrl() + '/admin/access?token=' + result.data.magic_link_token);
       showToast('Event berhasil dibuat!', 'success');
       // Reset form
@@ -632,9 +632,9 @@ function AdminDashboard() {
   {/* Tampilkan Dropdown & Hapus HANYA jika bukan di dashboard */}
   {selectedEvent && activeTab !== 'dashboard' && (
     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-      <select value={selectedEvent.code} onChange={(e) => { const ev = events.find(ev => ev.code === e.target.value); setSelectedEvent(ev); }} 
+      <select value={selectedEvent.event_code} onChange={(e) => { const ev = events.find(ev => ev.event_code === e.target.value); setSelectedEvent(ev); }} 
         style={{ padding: '10px 16px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-main)', fontSize: '14px', outline: 'none', minWidth: '200px' }}>
-        {events.map(ev => (<option key={ev.code} value={ev.code}>{ev.name}</option>))}
+        {events.map(ev => (<option key={ev.event_code} value={ev.event_code}>{ev.name}</option>))}
       </select>
       
       {isSuperAdmin && (
@@ -734,12 +734,12 @@ function AdminDashboard() {
                             </thead>
                             <tbody>
                               {filteredEvents.map((ev) => (
-                                <tr key={ev.code} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}
+                                <tr key={ev.event_code} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}
                                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-main)'}
                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                                   <td style={{ padding: '16px 24px', fontWeight: '700', color: 'var(--text-main)' }}>
                                     {ev.name}
-                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '4px' }}>{ev.code}</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '4px' }}>{ev.event_code}</div>
                                   </td>
                                   <td style={{ padding: '16px 24px', color: 'var(--text-muted)' }}>
                                     {ev.client_name || <span style={{ fontStyle: 'italic', opacity: 0.6 }}>Belum diisi</span>}
@@ -768,8 +768,8 @@ function AdminDashboard() {
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                       <button
                                         onClick={() => handleGetAdminLink(ev)}
-                                        disabled={rowActionLoading === ev.code}
-                                        style={{ padding: '8px 12px', backgroundColor: '#dcfce7', color: '#166534', border: 'none', borderRadius: '8px', cursor: rowActionLoading === ev.code ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', opacity: rowActionLoading === ev.code ? 0.6 : 1 }}
+                                        disabled={rowActionLoading === ev.event_code}
+                                        style={{ padding: '8px 12px', backgroundColor: '#dcfce7', color: '#166534', border: 'none', borderRadius: '8px', cursor: rowActionLoading === ev.event_code ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', opacity: rowActionLoading === ev.event_code ? 0.6 : 1 }}
                                         title="Salin Link Admin (magic link) — token lama diganti baru"
                                       >
                                         <Copy size={14} /> Link Admin
@@ -782,13 +782,13 @@ function AdminDashboard() {
                                         <QrCode size={14} /> QR
                                       </button>
                                       <button 
-                                        onClick={() => handleExport(ev.code)}
-                                        disabled={rowActionLoading === ev.code}
-                                        style={{ padding: '8px 12px', backgroundColor: '#dbeafe', color: '#1e40af', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', opacity: rowActionLoading === ev.code ? 0.6 : 1 }}
+                                        onClick={() => handleExport(ev.event_code)}
+                                        disabled={rowActionLoading === ev.event_code}
+                                        style={{ padding: '8px 12px', backgroundColor: '#dbeafe', color: '#1e40af', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', opacity: rowActionLoading === ev.event_code ? 0.6 : 1 }}
                                         title="Export ZIP"
                                       >
-                                        {rowActionLoading === ev.code ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} />} 
-                                        {rowActionLoading === ev.code ? 'Proses' : 'Export'}
+                                        {rowActionLoading === ev.event_code ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} />} 
+                                        {rowActionLoading === ev.event_code ? 'Proses' : 'Export'}
                                       </button>
                                       <button 
                                         onClick={() => { setSelectedEvent(ev); setShowDeleteModal(true); }}
@@ -1254,7 +1254,7 @@ function AdminDashboard() {
                   </button>
                   <button 
                     onClick={() => { 
-                      const newEvent = events.find(e => e.code === createdEventCode);
+                      const newEvent = events.find(e => e.event_code === createdEventCode);
                       if(newEvent) {
                         setQrEvent(newEvent);
                         setShowCreateModal(false);
@@ -1301,7 +1301,7 @@ function AdminDashboard() {
               display: 'inline-block'
             }}>
               <QRCodeCanvas 
-                value={getBaseUrl() + '/e/' + qrEvent.code} 
+                value={getBaseUrl() + '/e/' + qrEvent.event_code} 
                 size={200} 
                 level="H" 
                 fgColor="#1e293b" 
@@ -1324,7 +1324,7 @@ function AdminDashboard() {
               </button>
               <button 
                 onClick={() => { 
-                  const link = getBaseUrl() + '/e/' + qrEvent.code;
+                  const link = getBaseUrl() + '/e/' + qrEvent.event_code;
                   navigator.clipboard.writeText(link);
                   showToast('Link upload disalin!', 'success');
                 }} 

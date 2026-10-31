@@ -28,7 +28,7 @@ export async function POST(request) {
     const { data: eventData } = await supabaseServer
       .from('events')
       .select('report_threshold')
-      .eq('code', eventCode)
+      .eq('event_code', eventCode)
       .single();
 
     const threshold = eventData?.report_threshold || 5; // Default 5 jika tidak ada setting

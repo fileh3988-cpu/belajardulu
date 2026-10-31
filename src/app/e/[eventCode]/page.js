@@ -13,7 +13,7 @@ export default async function GuestPage({ params }) {
     const { data } = await supabaseServer
       .from('events')
       .select('theme')
-      .eq('code', eventCode)
+      .eq('event_code', eventCode)
       .single();
     theme = data?.theme || null;
   } catch (e) {

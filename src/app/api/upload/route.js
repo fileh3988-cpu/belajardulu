@@ -24,8 +24,8 @@ export async function POST(request) {
     // Validasi event ada & cek batas upload per event (mencegah spam)
     const { data: event, error: eventError } = await supabaseServer
       .from('events')
-      .select('code, max_uploads')
-      .eq('code', eventCode)
+      .select('event_code', 'max_uploads')
+      .eq('event_code', eventCode)
       .single();
 
     if (eventError || !event) {
